@@ -21,10 +21,10 @@ namespace AstarPathfinding
             {
                 Node currentNode = openQueue.Dequeue();
 
-                if (closedSet[currentNode.X, currentNode.Y])
+                if (closedSet[currentNode.Y, currentNode.X])
                     continue;
 
-                closedSet[currentNode.X, currentNode.Y] = true;
+                closedSet[currentNode.Y, currentNode.X] = true;
 
                 if (currentNode.X == endNode.X && currentNode.Y == endNode.Y)
                     return ReconstructPath(currentNode);
@@ -38,15 +38,15 @@ namespace AstarPathfinding
                     int newY = currentNode.Y + dirY[i];
 
                     // Map Boundaries Check
-                    if (newX < 0 || newX >= grid.GetLength(0) || newY < 0 || newY >= grid.GetLength(1))
+                    if (newY < 0 || newY >= grid.GetLength(0) || newX < 0 || newX >= grid.GetLength(1))
                         continue;
 
                     // Wall Check
-                    int terrainCost = grid[newX, newY];
+                    int terrainCost = grid[newY, newX];
                     if (terrainCost == 99) 
                         continue;
 
-                    if (closedSet[newX, newY]) 
+                    if (closedSet[newY, newX]) 
                         continue;
 
                     int tentativeG = currentNode.G + terrainCost;
@@ -88,10 +88,10 @@ namespace AstarPathfinding
             {
                 Node currentNode = openQueue.Dequeue();
 
-                if (closedSet[currentNode.X, currentNode.Y])
+                if (closedSet[currentNode.Y, currentNode.X])
                     continue;
 
-                closedSet[currentNode.X, currentNode.Y] = true;
+                closedSet[currentNode.Y, currentNode.X] = true;
 
                 if (currentNode.X == endNode.X && currentNode.Y == endNode.Y)
                 {
@@ -107,15 +107,15 @@ namespace AstarPathfinding
                     int newY = currentNode.Y + dirY[i];
 
                     // Map Boundaries Check
-                    if (newX < 0 || newX >= grid.GetLength(0) || newY < 0 || newY >= grid.GetLength(1))
+                    if (newY < 0 || newY >= grid.GetLength(0) || newX < 0 || newX >= grid.GetLength(1))
                         continue;
 
                     // Wall Check
-                    int terrainCost = grid[newX, newY];
+                    int terrainCost = grid[newY, newX];
                     if (terrainCost == 99) 
                         continue;
 
-                    if (closedSet[newX, newY]) 
+                    if (closedSet[newY, newX]) 
                         continue;
 
                     int tentativeG = currentNode.G + terrainCost;
