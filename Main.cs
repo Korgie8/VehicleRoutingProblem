@@ -5,6 +5,33 @@ using Pathing = AstarPathfinding.AstarPathfinding;
 
 # region Data Classes
 
+public readonly struct EntityHandle : IEquatable<EntityHandle>
+{
+    public readonly uint Value;
+
+    // Pack on creation
+    public EntityHandle(byte type, uint id)
+    {
+        // Top 8 bits for Type, Bottom 24 bits for ID
+        Value = ((uint)type << 24) | (id & 0x00FFFFFF);
+    }
+
+    // Unpack on the fly (compiled to single CPU instructions)
+    public byte Type => (byte)(Value >> 24);
+    public uint Id => Value & 0x00FFFFFF;
+
+    // --- Boilerplate for fast equality comparisons ---
+    
+    public bool Equals(EntityHandle other) => Value == other.Value;
+    public override bool Equals(object? obj) => obj is EntityHandle other && Equals(other);
+    public override int GetHashCode() => Value.GetHashCode();
+
+    public static bool operator ==(EntityHandle left, EntityHandle right) => left.Value == right.Value;
+    public static bool operator !=(EntityHandle left, EntityHandle right) => left.Value != right.Value;
+    
+    public override string ToString() => $"{Type}:{Id}";
+}
+
 public class Node
 {
     public int X { get; private set; }
@@ -39,9 +66,9 @@ public class Path
 
 public class Order
 {
-    private static int _idCounter = 1;
+    private static uint _idCounter = 1;
 
-    public int Id { get; private set; }
+    public uint Id { get; private set; }
     public int X { get; set; }
     public int Y { get; set; }
     public int StorageRequired { get; set; }
@@ -57,9 +84,9 @@ public class Order
 
 public class Depot
 {
-    private static int _idCounter = 1;
+    private static uint _idCounter = 1;
 
-    public int Id { get; private set; }
+    public uint Id { get; private set; }
     public int X { get; set; }
     public int Y { get; set; }
 
@@ -79,12 +106,18 @@ public enum TruckState
     Refueling
 }
 
+public enum noteType
+{
+    Depot = 0,
+    Order = 1,
+}
+
 public class Truck
 {
-private static int _idCounter = 1;
+    private static uint _idCounter = 1;
 
     public main mainApp { get; set; }
-    public int Id { get; private set; }
+    public uint Id { get; private set; }
     public int CurrentX { get; private set; }
     public int CurrentY { get; private set; }
     
@@ -217,11 +250,11 @@ private static int _idCounter = 1;
 
 public class SavingsPair
 {
-    public string OrderA_Key { get; set; }
-    public string OrderB_Key { get; set; }
+    public EntityHandle OrderA_Key { get; set; }
+    public EntityHandle OrderB_Key { get; set; }
     public int Savings { get; set; }
 
-    public SavingsPair(string a, string b, int savings)
+    public SavingsPair(EntityHandle a, EntityHandle b, int savings)
     {
         OrderA_Key = a;
         OrderB_Key = b;
@@ -250,10 +283,10 @@ public class main
     }
 
     // Key: (Start Node ID, End Node ID) -> Distance
-    public Dictionary<(string, string), int> DistanceMatrix = new Dictionary<(string, string), int>();
-    public Dictionary<string, Truck> RouteStarts = new Dictionary<string, Truck>();
-    public Dictionary<string, Truck> RouteEnds = new Dictionary<string, Truck>();
-    public HashSet<string> AssignedOrders = new HashSet<string>();
+    public Dictionary<(EntityHandle, EntityHandle), int> DistanceMatrix = new Dictionary<(EntityHandle, EntityHandle), int>();
+    public Dictionary<EntityHandle, Truck> RouteStarts = new Dictionary<EntityHandle, Truck>();
+    public Dictionary<EntityHandle, Truck> RouteEnds = new Dictionary<EntityHandle, Truck>();
+    public HashSet<EntityHandle> AssignedOrders = new HashSet<EntityHandle>();
     public List<Order> UnassignedOrders = new List<Order>();
 
     public List<Order> Orders = new List<Order>();
@@ -359,11 +392,11 @@ public class main
 
         foreach (var entry in sortedSavings)
         {
-            string a = entry.OrderA_Key;
-            string b = entry.OrderB_Key;
+            EntityHandle a = entry.OrderA_Key;
+            EntityHandle b = entry.OrderB_Key;
 
-            Order orderA = UnassignedOrders.FirstOrDefault(o => $"O{o.Id}" == a);
-            Order orderB = UnassignedOrders.FirstOrDefault(o => $"O{o.Id}" == b);
+            Order orderA = UnassignedOrders.FirstOrDefault(o => o.Id == a.Id);
+            Order orderB = UnassignedOrders.FirstOrDefault(o => o.Id == b.Id);
 
             if (orderA == null || orderB == null) continue;
 
@@ -415,12 +448,12 @@ public class main
 
                 truck.ActionTimer = truck.CurrentStorage / 2;
                 truck.State = TruckState.Loading;
-                Console.WriteLine($"Truck {truck.Id} assigned route: {string.Join(" -> ", truck.AssignedRoute.Select(o => $"O{o.Id}"))}");
+                Console.WriteLine($"Truck {truck.Id} assigned route: {string.Join(" -> ", truck.AssignedRoute.Select(handle => $"O{handle.Id}"))}");
             }
         }
     }
 
-    private bool TryCreateNewRoute(Order orderA, Order orderB, string a, string b)
+    private bool TryCreateNewRoute(Order orderA, Order orderB, EntityHandle a, EntityHandle b)
     {
         Truck emptyTruck = Trucks.FirstOrDefault(t => t.IsEmpty);
         if (emptyTruck != null && emptyTruck.CurrentStorage + orderA.StorageRequired + orderB.StorageRequired <= emptyTruck.MaxStorage)
@@ -443,7 +476,7 @@ public class main
         return false;
     }
 
-    private bool TryAppendToRoute(Order assignedOrder, Order unassignedOrder, string assignedKey, string unassignedKey)
+    private bool TryAppendToRoute(Order assignedOrder, Order unassignedOrder, EntityHandle assignedKey, EntityHandle unassignedKey)
     {
         // Try appending to the END of a route
         if (RouteEnds.TryGetValue(assignedKey, out Truck truckEndingWithAssigned) && 
@@ -482,7 +515,7 @@ public class main
         return false;
     }
 
-    private bool TryMergeExistingRoutes(string keyA, string keyB)
+    private bool TryMergeExistingRoutes(EntityHandle keyA, EntityHandle keyB)
     {
         if (RouteEnds.TryGetValue(keyA, out Truck truckA) && RouteStarts.TryGetValue(keyB, out Truck truckB) && truckA.Id != truckB.Id)
         {
@@ -492,7 +525,7 @@ public class main
                 testRoute.AddRange(truckB.AssignedRoute);
                 if (CalculateRouteFuelCost(testRoute) <= truckA.MaxFuelCapacity)
                 {
-                    string endOfTruckB = $"O{truckB.LastStop.Id}";
+                    EntityHandle endOfTruckB = new EntityHandle(type: 1, id: truckB.LastStop.Id);
                     truckA.AssignedRoute.AddRange(truckB.AssignedRoute);
                     truckA.CurrentStorage += truckB.CurrentStorage;
                     truckB.AssignedRoute.Clear();
@@ -512,7 +545,7 @@ public class main
                 testRoute.AddRange(truckA.AssignedRoute);
                 if (CalculateRouteFuelCost(testRoute) <= truckB.MaxFuelCapacity)
                 {
-                    string endOfTruckA = $"O{truckA.LastStop.Id}";
+                    EntityHandle endOfTruckA = new EntityHandle(type: 1, id: truckA.LastStop.Id);
                     truckB.AssignedRoute.AddRange(truckA.AssignedRoute);
                     truckB.CurrentStorage += truckA.CurrentStorage;
                     truckA.AssignedRoute.Clear();
@@ -531,19 +564,19 @@ public class main
     {
         if (proposedRoute.Count == 0) return 0;
         
-        string depotKey = $"D{CentralDepot.Id}";
+        EntityHandle depotKey = new EntityHandle(type: 0, id: CentralDepot.Id);
         int totalFuel = 0;
         
-        totalFuel += DistanceMatrix[(depotKey, $"O{proposedRoute[0].Id}")];
+        totalFuel += DistanceMatrix[(depotKey, new EntityHandle(type: 1, id: proposedRoute[0].Id))];
         
         for (int i = 0; i < proposedRoute.Count - 1; i++)
         {
-            string currentStop = $"O{proposedRoute[i].Id}";
-            string nextStop = $"O{proposedRoute[i+1].Id}";
+            EntityHandle currentStop = new EntityHandle(type: 1, id: proposedRoute[i].Id);
+            EntityHandle nextStop = new EntityHandle(type: 1, id: proposedRoute[i+1].Id);
             totalFuel += DistanceMatrix[(currentStop, nextStop)];
         }
         
-        totalFuel += DistanceMatrix[($"O{proposedRoute[proposedRoute.Count - 1].Id}", depotKey)];
+        totalFuel += DistanceMatrix[(new EntityHandle(type: 1, id: proposedRoute[proposedRoute.Count - 1].Id), depotKey)];
         
         return totalFuel;
     }
@@ -552,13 +585,13 @@ public class main
     {
         Console.WriteLine("Building Distance Matrix...");
 
-        string depotKey = $"D{CentralDepot.Id}";
+        EntityHandle depotKey = new EntityHandle(type: 0, id: CentralDepot.Id);
         Node depotNode = new Node(CentralDepot.X, CentralDepot.Y);
 
         foreach (var order in Orders)
         {
             Node orderNode = new Node(order.X, order.Y);
-            string orderKey = $"O{order.Id}";
+            EntityHandle orderKey = new EntityHandle(type: 1, id: order.Id);
             int cost = Pathing.FindPathAndReturnInt(grid, depotNode, orderNode);
             
             if (cost != -1)
@@ -571,12 +604,12 @@ public class main
         for (int i = 0; i < Orders.Count; i++)
         {
             Node nodeA = new Node(Orders[i].X, Orders[i].Y);
-            string keyA = $"O{Orders[i].Id}";
+            EntityHandle keyA = new EntityHandle(type: 1, id: Orders[i].Id);
 
             for (int j = i + 1; j < Orders.Count; j++)
             {
                 Node nodeB = new Node(Orders[j].X, Orders[j].Y);
-                string keyB = $"O{Orders[j].Id}";
+                EntityHandle keyB = new EntityHandle(type: 1, id: Orders[j].Id);
 
                 int cost = Pathing.FindPathAndReturnInt(grid, nodeA, nodeB);
 
@@ -594,15 +627,16 @@ public class main
     public List<SavingsPair> CalculateSavings()
     {
         List<SavingsPair> savingsList = new List<SavingsPair>();
-        string depotKey = $"D{CentralDepot.Id}";
+        EntityHandle depotKey = new EntityHandle(type: 0, id: CentralDepot.Id);
 
         for (int i = 0; i < UnassignedOrders.Count; i++)
         {
-            string orderAKey = $"O{UnassignedOrders[i].Id}";
+            EntityHandle orderAKey = new EntityHandle(type: 1, id: UnassignedOrders[i].Id);
+
 
             for (int j = i + 1; j < UnassignedOrders.Count; j++)
             {
-                string orderBKey = $"O{UnassignedOrders[j].Id}";
+                EntityHandle orderBKey = new EntityHandle(type: 1, id: UnassignedOrders[j].Id);
 
                 if (DistanceMatrix.TryGetValue((orderAKey, orderBKey), out int costAB) &&
                     DistanceMatrix.TryGetValue((orderAKey, depotKey), out int costADepot) &&

@@ -18,8 +18,8 @@ public class SimulationVisualizer
 
     // Grid-space (not pixel) positions used to smoothly interpolate truck movement
     // between backend ticks, keyed by Truck.Id.
-    private readonly Dictionary<int, Vector2> _truckRenderFrom = new();
-    private readonly Dictionary<int, Vector2> _truckRenderTo = new();
+    private readonly Dictionary<uint, Vector2> _truckRenderFrom = new();
+    private readonly Dictionary<uint, Vector2> _truckRenderTo = new();
 
     // --- Layout ---
     private const float Pad = 12f;
