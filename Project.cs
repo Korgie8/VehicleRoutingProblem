@@ -124,7 +124,7 @@ private static int _idCounter = 1;
                         Order nextOrder = PendingOrders.Peek();
                         Node startNode = new Node(CurrentX, CurrentY);
                         Node targetNode = new Node(nextOrder.X, nextOrder.Y);
-                        CurrentPhysicalPath = new Queue<Node>(Pathing.FindPathAndReturnPath(mainApp.testingGrid, startNode, targetNode));
+                        CurrentPhysicalPath = BuildMovementQueue(startNode, targetNode);
                     }
                 }
                 break;
@@ -159,7 +159,7 @@ private static int _idCounter = 1;
 
     private void ArrivedAtDestination()
     {
-        if (CurrentX == 0 && CurrentY == 0)
+        if (CurrentX == mainApp.CentralDepot.X && CurrentY == mainApp.CentralDepot.Y)
         {
             Console.WriteLine($"Truck {Id} returned to Depot.");
             State = TruckState.Refueling;
@@ -186,11 +186,22 @@ private static int _idCounter = 1;
             }
             else
             {
-                targetNode = new Node(0, 0); 
+                targetNode = new Node(mainApp.CentralDepot.X, mainApp.CentralDepot.Y); 
             }
 
-            CurrentPhysicalPath = new Queue<Node>(Pathing.FindPathAndReturnPath(mainApp.testingGrid, startNode, targetNode));
+            CurrentPhysicalPath = BuildMovementQueue(startNode, targetNode);
         }
+    }
+
+    private Queue<Node> BuildMovementQueue(Node start, Node target)
+    {
+        var path = Pathing.FindPathAndReturnPath(mainApp.testingGrid, start, target);
+        if (path == null) return new Queue<Node>();
+
+        // Remove the first node since it's the current position of the truck
+        var queue = new Queue<Node>(path);
+        if (queue.Count > 0) queue.Dequeue();
+        return queue;
     }
 
     public Truck(int maxStorage, int maxFuelCapacity = 100, int fuelRechargeRate = 5)
@@ -225,8 +236,17 @@ public class main
     # region Data Structures
     public static void Main()
     {
+        // Initialize the backend
         main app = new main();
-        app.Run();
+        
+        // Uncomment Run and comment the rest of this script to run the backend simulation without visualization
+        //app.Run();
+
+        app.Init();
+
+        // Pass it to the visualizer and run
+        SimulationVisualizer visualizer = new SimulationVisualizer(app);
+        visualizer.Run(); 
     }
 
     // Key: (Start Node ID, End Node ID) -> Distance
@@ -254,9 +274,14 @@ public class main
         { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1 }
     };
 
+    public int CurrentTick { get; private set; } = 0;
+    public bool IsSimulationFinished { get; private set; } = false;
+
     # endregion
 
-    public void Run()
+    // Changed to Init for visual layer switch to Run and uncomment the while loop for backend simulation
+    public void Init()
+    // public void Run()
     {
         // Setup dummy data
         CentralDepot = new Depot(0, 0);
@@ -275,7 +300,7 @@ public class main
 
         BuildDistanceMatrix(testingGrid);
 
-        int currentTick = 0;
+        /*int currentTick = 0;
     
         while (true)
         {
@@ -295,6 +320,25 @@ public class main
             }
 
             System.Threading.Thread.Sleep(100);
+        }*/
+    }
+
+    public void TickSimulation()
+    {
+        if (IsSimulationFinished) return;
+
+        CurrentTick++;
+        DispatchWave();
+
+        foreach (var truck in Trucks)
+        {
+            truck.Tick();
+        }
+
+        if (UnassignedOrders.Count == 0 && Trucks.All(t => t.State == TruckState.Idle))
+        {
+            Console.WriteLine($"All orders delivered! Shift ended at tick {CurrentTick}.");
+            IsSimulationFinished = true;
         }
     }
 
