@@ -237,7 +237,7 @@ public class main
     public List<Order> UnassignedOrders = new List<Order>();
 
     public List<Order> Orders = new List<Order>();
-    public List<Depot> Depots = new List<Depot>();
+    public Depot CentralDepot;
     public List<Truck> Trucks = new List<Truck>();
     public List<SavingsPair> sortedSavings = new List<SavingsPair>();
     public int[,] testingGrid = new int[10, 10]
@@ -259,7 +259,8 @@ public class main
     public void Run()
     {
         // Setup dummy data
-        Depots.Add(new Depot(0, 0));
+        CentralDepot = new Depot(0, 0);
+        
         Orders.Add(new Order(9, 9, 10));
         Orders.Add(new Order(0, 9, 5));
         Orders.Add(new Order(9, 0, 8));
@@ -327,154 +328,19 @@ public class main
 
             if (!isAAssigned && !isBAssigned)
             {
-                Truck emptyTruck = Trucks.FirstOrDefault(t => t.IsEmpty);
-                if (emptyTruck != null)
-                {
-                    if (emptyTruck.CurrentStorage + orderA.StorageRequired + orderB.StorageRequired <= emptyTruck.MaxStorage)
-                    {
-                        List<Order> testRoute = new List<Order> { orderA, orderB };
-                        
-                        if (CalculateRouteFuelCost(testRoute) <= emptyTruck.MaxFuelCapacity)
-                        {
-                            emptyTruck.AssignedRoute.Add(orderA);
-                            emptyTruck.AssignedRoute.Add(orderB);
-                            emptyTruck.CurrentStorage += (orderA.StorageRequired + orderB.StorageRequired);
-                            AssignedOrders.Add(a);
-                            AssignedOrders.Add(b);
-                            UnassignedOrders.Remove(orderA);
-                            UnassignedOrders.Remove(orderB);
-                            RouteStarts[a] = emptyTruck;
-                            RouteEnds[b] = emptyTruck;
-                        }
-                    }
-                }
+                TryCreateNewRoute(orderA, orderB, a, b);
             }
             else if (isAAssigned && !isBAssigned)
             {
-                if (RouteEnds.TryGetValue(a, out Truck truckEndingWithA))
-                {
-                    if (truckEndingWithA.CurrentStorage + orderB.StorageRequired <= truckEndingWithA.MaxStorage)
-                    {
-                        List<Order> testRoute = new List<Order>(truckEndingWithA.AssignedRoute);
-                        testRoute.Add(orderB);
-
-                        if (CalculateRouteFuelCost(testRoute) <= truckEndingWithA.MaxFuelCapacity)
-                        {
-                            truckEndingWithA.AssignedRoute.Add(orderB);
-                            truckEndingWithA.CurrentStorage += orderB.StorageRequired;
-                            AssignedOrders.Add(b);
-                            UnassignedOrders.Remove(orderB);
-                            RouteEnds.Remove(a);
-                            RouteEnds[b] = truckEndingWithA;
-                        }
-                    }
-                }
-                else if (RouteStarts.TryGetValue(a, out Truck truckStartingWithA))
-                {
-                    if (truckStartingWithA.CurrentStorage + orderB.StorageRequired <= truckStartingWithA.MaxStorage)
-                    {
-                        List<Order> testRoute = new List<Order>(truckStartingWithA.AssignedRoute);
-                        testRoute.Insert(0, orderB);
-
-                        if (CalculateRouteFuelCost(testRoute) <= truckStartingWithA.MaxFuelCapacity)
-                        {
-                            truckStartingWithA.AssignedRoute.Insert(0, orderB);
-                            truckStartingWithA.CurrentStorage += orderB.StorageRequired;
-                            AssignedOrders.Add(b);
-                            UnassignedOrders.Remove(orderB);
-                            RouteStarts.Remove(a);
-                            RouteStarts[b] = truckStartingWithA;
-                        }
-                    }
-                }
+                TryAppendToRoute(orderA, orderB, a, b);
             }
             else if (!isAAssigned && isBAssigned)
             {
-                if (RouteEnds.TryGetValue(b, out Truck truckEndingWithB))
-                {
-                    if (truckEndingWithB.CurrentStorage + orderA.StorageRequired <= truckEndingWithB.MaxStorage)
-                    {
-                        List<Order> testRoute = new List<Order>(truckEndingWithB.AssignedRoute);
-                        testRoute.Add(orderA);
-
-                        if (CalculateRouteFuelCost(testRoute) <= truckEndingWithB.MaxFuelCapacity)
-                        {
-                            truckEndingWithB.AssignedRoute.Add(orderA);
-                            truckEndingWithB.CurrentStorage += orderA.StorageRequired;
-                            AssignedOrders.Add(a);
-                            UnassignedOrders.Remove(orderA);
-                            RouteEnds.Remove(b);
-                            RouteEnds[a] = truckEndingWithB;
-                        }
-                    }
-                }
-                else if (RouteStarts.TryGetValue(b, out Truck truckStartingWithB))
-                {
-                    if (truckStartingWithB.CurrentStorage + orderA.StorageRequired <= truckStartingWithB.MaxStorage)
-                    {
-                        List<Order> testRoute = new List<Order>(truckStartingWithB.AssignedRoute);
-                        testRoute.Insert(0, orderA);
-
-                        if (CalculateRouteFuelCost(testRoute) <= truckStartingWithB.MaxFuelCapacity)
-                        {
-                            truckStartingWithB.AssignedRoute.Insert(0, orderA);
-                            truckStartingWithB.CurrentStorage += orderA.StorageRequired;
-                            AssignedOrders.Add(a);
-                            UnassignedOrders.Remove(orderA);
-                            RouteStarts.Remove(b);
-                            RouteStarts[a] = truckStartingWithB;
-                        }
-                    }
-                }
+                TryAppendToRoute(orderB, orderA, b, a); 
             }
             else if (isAAssigned && isBAssigned)
             {                
-                if (RouteEnds.TryGetValue(a, out Truck truckEndingWithA) && RouteStarts.TryGetValue(b, out Truck truckStartingWithB))
-                {
-                    if (truckEndingWithA.Id != truckStartingWithB.Id) 
-                    {
-                        if (truckEndingWithA.CurrentStorage + truckStartingWithB.CurrentStorage <= truckEndingWithA.MaxStorage)
-                        {
-                            List<Order> testRoute = new List<Order>(truckEndingWithA.AssignedRoute);
-                            testRoute.AddRange(truckStartingWithB.AssignedRoute);
-
-                            if (CalculateRouteFuelCost(testRoute) <= truckEndingWithA.MaxFuelCapacity)
-                            {
-                                string endOfTruckB = $"O{truckStartingWithB.LastStop.Id}";
-                                truckEndingWithA.AssignedRoute.AddRange(truckStartingWithB.AssignedRoute);
-                                truckEndingWithA.CurrentStorage += truckStartingWithB.CurrentStorage;
-                                truckStartingWithB.AssignedRoute.Clear();
-                                truckStartingWithB.CurrentStorage = 0;
-                                RouteEnds.Remove(a);
-                                RouteStarts.Remove(b);
-                                RouteEnds[endOfTruckB] = truckEndingWithA;
-                            }
-                        }
-                    }
-                }
-                else if (RouteStarts.TryGetValue(a, out Truck truckStartingWithA) && RouteEnds.TryGetValue(b, out Truck truckEndingWithB))
-                {
-                    if (truckStartingWithA.Id != truckEndingWithB.Id) 
-                    {
-                        if (truckEndingWithB.CurrentStorage + truckStartingWithA.CurrentStorage <= truckEndingWithB.MaxStorage)
-                        {
-                            List<Order> testRoute = new List<Order>(truckEndingWithB.AssignedRoute);
-                            testRoute.AddRange(truckStartingWithA.AssignedRoute);
-
-                            if (CalculateRouteFuelCost(testRoute) <= truckEndingWithB.MaxFuelCapacity)
-                            {
-                                string endOfTruckA = $"O{truckStartingWithA.LastStop.Id}";
-                                truckEndingWithB.AssignedRoute.AddRange(truckStartingWithA.AssignedRoute);
-                                truckEndingWithB.CurrentStorage += truckStartingWithA.CurrentStorage;
-                                truckStartingWithA.AssignedRoute.Clear();
-                                truckStartingWithA.CurrentStorage = 0;
-                                RouteEnds.Remove(b);
-                                RouteStarts.Remove(a);
-                                RouteEnds[endOfTruckA] = truckEndingWithB;
-                            }
-                        }
-                    }
-                }
+                TryMergeExistingRoutes(a, b);
             }
         }
 
@@ -510,11 +376,118 @@ public class main
         }
     }
 
+    private bool TryCreateNewRoute(Order orderA, Order orderB, string a, string b)
+    {
+        Truck emptyTruck = Trucks.FirstOrDefault(t => t.IsEmpty);
+        if (emptyTruck != null && emptyTruck.CurrentStorage + orderA.StorageRequired + orderB.StorageRequired <= emptyTruck.MaxStorage)
+        {
+            List<Order> testRoute = new List<Order> { orderA, orderB };
+            if (CalculateRouteFuelCost(testRoute) <= emptyTruck.MaxFuelCapacity)
+            {
+                emptyTruck.AssignedRoute.Add(orderA);
+                emptyTruck.AssignedRoute.Add(orderB);
+                emptyTruck.CurrentStorage += (orderA.StorageRequired + orderB.StorageRequired);
+                AssignedOrders.Add(a);
+                AssignedOrders.Add(b);
+                UnassignedOrders.Remove(orderA);
+                UnassignedOrders.Remove(orderB);
+                RouteStarts[a] = emptyTruck;
+                RouteEnds[b] = emptyTruck;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool TryAppendToRoute(Order assignedOrder, Order unassignedOrder, string assignedKey, string unassignedKey)
+    {
+        // Try appending to the END of a route
+        if (RouteEnds.TryGetValue(assignedKey, out Truck truckEndingWithAssigned) && 
+            truckEndingWithAssigned.CurrentStorage + unassignedOrder.StorageRequired <= truckEndingWithAssigned.MaxStorage)
+        {
+            List<Order> testRoute = new List<Order>(truckEndingWithAssigned.AssignedRoute) { unassignedOrder };
+            if (CalculateRouteFuelCost(testRoute) <= truckEndingWithAssigned.MaxFuelCapacity)
+            {
+                truckEndingWithAssigned.AssignedRoute.Add(unassignedOrder);
+                truckEndingWithAssigned.CurrentStorage += unassignedOrder.StorageRequired;
+                AssignedOrders.Add(unassignedKey);
+                UnassignedOrders.Remove(unassignedOrder);
+                RouteEnds.Remove(assignedKey);
+                RouteEnds[unassignedKey] = truckEndingWithAssigned;
+                return true;
+            }
+        }
+
+        // Try prepending to the START of a route
+        else if (RouteStarts.TryGetValue(assignedKey, out Truck truckStartingWithAssigned) && 
+                truckStartingWithAssigned.CurrentStorage + unassignedOrder.StorageRequired <= truckStartingWithAssigned.MaxStorage)
+        {
+            List<Order> testRoute = new List<Order>(truckStartingWithAssigned.AssignedRoute);
+            testRoute.Insert(0, unassignedOrder);
+            if (CalculateRouteFuelCost(testRoute) <= truckStartingWithAssigned.MaxFuelCapacity)
+            {
+                truckStartingWithAssigned.AssignedRoute.Insert(0, unassignedOrder);
+                truckStartingWithAssigned.CurrentStorage += unassignedOrder.StorageRequired;
+                AssignedOrders.Add(unassignedKey);
+                UnassignedOrders.Remove(unassignedOrder);
+                RouteStarts.Remove(assignedKey);
+                RouteStarts[unassignedKey] = truckStartingWithAssigned;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool TryMergeExistingRoutes(string keyA, string keyB)
+    {
+        if (RouteEnds.TryGetValue(keyA, out Truck truckA) && RouteStarts.TryGetValue(keyB, out Truck truckB) && truckA.Id != truckB.Id)
+        {
+            if (truckA.CurrentStorage + truckB.CurrentStorage <= truckA.MaxStorage)
+            {
+                List<Order> testRoute = new List<Order>(truckA.AssignedRoute);
+                testRoute.AddRange(truckB.AssignedRoute);
+                if (CalculateRouteFuelCost(testRoute) <= truckA.MaxFuelCapacity)
+                {
+                    string endOfTruckB = $"O{truckB.LastStop.Id}";
+                    truckA.AssignedRoute.AddRange(truckB.AssignedRoute);
+                    truckA.CurrentStorage += truckB.CurrentStorage;
+                    truckB.AssignedRoute.Clear();
+                    truckB.CurrentStorage = 0;
+                    RouteEnds.Remove(keyA);
+                    RouteStarts.Remove(keyB);
+                    RouteEnds[endOfTruckB] = truckA;
+                    return true;
+                }
+            }
+        }
+        else if (RouteStarts.TryGetValue(keyA, out truckA) && RouteEnds.TryGetValue(keyB, out truckB) && truckA.Id != truckB.Id)
+        {
+            if (truckB.CurrentStorage + truckA.CurrentStorage <= truckB.MaxStorage)
+            {
+                List<Order> testRoute = new List<Order>(truckB.AssignedRoute);
+                testRoute.AddRange(truckA.AssignedRoute);
+                if (CalculateRouteFuelCost(testRoute) <= truckB.MaxFuelCapacity)
+                {
+                    string endOfTruckA = $"O{truckA.LastStop.Id}";
+                    truckB.AssignedRoute.AddRange(truckA.AssignedRoute);
+                    truckB.CurrentStorage += truckA.CurrentStorage;
+                    truckA.AssignedRoute.Clear();
+                    truckA.CurrentStorage = 0;
+                    RouteEnds.Remove(keyB);
+                    RouteStarts.Remove(keyA);
+                    RouteEnds[endOfTruckA] = truckB;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public int CalculateRouteFuelCost(List<Order> proposedRoute)
     {
         if (proposedRoute.Count == 0) return 0;
         
-        string depotKey = $"D{Depots[0].Id}";
+        string depotKey = $"D{CentralDepot.Id}";
         int totalFuel = 0;
         
         totalFuel += DistanceMatrix[(depotKey, $"O{proposedRoute[0].Id}")];
@@ -535,27 +508,19 @@ public class main
     {
         Console.WriteLine("Building Distance Matrix...");
 
-        foreach (var depot in Depots)
+        string depotKey = $"D{CentralDepot.Id}";
+        Node depotNode = new Node(CentralDepot.X, CentralDepot.Y);
+
+        foreach (var order in Orders)
         {
-            Node depotNode = new Node(depot.X, depot.Y);
-            string depotKey = $"D{depot.Id}";
-
-            foreach (var order in Orders)
+            Node orderNode = new Node(order.X, order.Y);
+            string orderKey = $"O{order.Id}";
+            int cost = Pathing.FindPathAndReturnInt(grid, depotNode, orderNode);
+            
+            if (cost != -1)
             {
-                Node orderNode = new Node(order.X, order.Y);
-                string orderKey = $"O{order.Id}";
-
-                int cost = Pathing.FindPathAndReturnInt(grid, depotNode, orderNode);
-                
-                if (cost != -1)
-                {
-                    DistanceMatrix[(depotKey, orderKey)] = cost;
-                    DistanceMatrix[(orderKey, depotKey)] = cost;
-                }
-                else
-                {
-                    Console.WriteLine($"WARNING: Order {order.Id} is unreachable from Depot {depot.Id}.");
-                }
+                DistanceMatrix[(depotKey, orderKey)] = cost;
+                DistanceMatrix[(orderKey, depotKey)] = cost;
             }
         }
 
@@ -585,25 +550,22 @@ public class main
     public List<SavingsPair> CalculateSavings()
     {
         List<SavingsPair> savingsList = new List<SavingsPair>();
-        foreach (var depot in Depots)
+        string depotKey = $"D{CentralDepot.Id}";
+
+        for (int i = 0; i < UnassignedOrders.Count; i++)
         {
-            string depotKey = $"D{depot.Id}";
+            string orderAKey = $"O{UnassignedOrders[i].Id}";
 
-            for (int i = 0; i < UnassignedOrders.Count; i++)
+            for (int j = i + 1; j < UnassignedOrders.Count; j++)
             {
-                string orderAKey = $"O{UnassignedOrders[i].Id}";
+                string orderBKey = $"O{UnassignedOrders[j].Id}";
 
-                for (int j = i + 1; j < UnassignedOrders.Count; j++)
+                if (DistanceMatrix.TryGetValue((orderAKey, orderBKey), out int costAB) &&
+                    DistanceMatrix.TryGetValue((orderAKey, depotKey), out int costADepot) &&
+                    DistanceMatrix.TryGetValue((orderBKey, depotKey), out int costBDepot))
                 {
-                    string orderBKey = $"O{UnassignedOrders[j].Id}";
-
-                    if (DistanceMatrix.TryGetValue((orderAKey, orderBKey), out int costAB) &&
-                        DistanceMatrix.TryGetValue((orderAKey, depotKey), out int costADepot) &&
-                        DistanceMatrix.TryGetValue((orderBKey, depotKey), out int costBDepot))
-                    {
-                        int savings = (costADepot + costBDepot) - costAB;
-                        savingsList.Add(new SavingsPair(orderAKey, orderBKey, savings));
-                    }
+                    int savings = (costADepot + costBDepot) - costAB;
+                    savingsList.Add(new SavingsPair(orderAKey, orderBKey, savings));
                 }
             }
         }
