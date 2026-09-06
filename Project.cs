@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Pathing = AstarPathfinding.AstarPathfinding;
 
+# region Data Classes
+
 public class Node
 {
-    public int X { get; set; }
-    public int Y { get; set; }
+    public int X { get; private set; }
+    public int Y { get; private set; }
     public int TerrainCost { get; set; } = 1;
     public int G { get; set; } // Cost from start
     public int H { get; set; } // Estimated cost to end
@@ -22,11 +24,11 @@ public class Node
 
 public class Path
 {
-    public Node Start { get; set; }
-    public Node End { get; set; }
-    public List<Node> Nodes { get; set; }
-    public int TotalCost { get; set; }
-    public List<int> TerrainCosts { get; set; }
+    public Node Start { get; private set; }
+    public Node End { get; private set; }
+    public List<Node> Nodes { get; private set; }
+    public int TotalCost { get; private set; }
+    public List<int> TerrainCosts { get; private set; }
 
     public Path(List<Node> nodes, int totalCost)
     {
@@ -79,15 +81,20 @@ public enum TruckState
 
 public class Truck
 {
+private static int _idCounter = 1;
+
     public main mainApp { get; set; }
-    public int Id { get; set; }
-    public int CurrentX { get; set; }
-    public int CurrentY { get; set; }
-    public int FuelCapacity { get; set; }
-    public int MaxFuelCapacity { get; set; }
-    public int FuelRechargeRate { get; set; }
+    public int Id { get; private set; }
+    public int CurrentX { get; private set; }
+    public int CurrentY { get; private set; }
+    
+    public int FuelCapacity { get; private set; }
+    public int MaxFuelCapacity { get; private set; }
+    public int FuelRechargeRate { get; private set; }
+    
     public int CurrentStorage { get; set; }
-    public int MaxStorage { get; set; }
+    public int MaxStorage { get; private set; }
+    
     public List<Order> AssignedRoute { get; set; } = new List<Order>();
     public TruckState State { get; set; } = TruckState.Idle;
 
@@ -98,7 +105,6 @@ public class Truck
     public Queue<Order> PendingOrders { get; set; } = new Queue<Order>();
     public Queue<Node> CurrentPhysicalPath { get; set; } = new Queue<Node>();
     public int ActionTimer { get; set; } = 0;
-
     public void Tick()
     {
         switch (State)
@@ -187,9 +193,9 @@ public class Truck
         }
     }
 
-    public Truck(int id, int maxStorage, int maxFuelCapacity = 100, int fuelRechargeRate = 5)
+    public Truck(int maxStorage, int maxFuelCapacity = 100, int fuelRechargeRate = 5)
     {
-        Id = id;
+        Id = _idCounter++;
         MaxStorage = maxStorage;
         MaxFuelCapacity = maxFuelCapacity;
         FuelRechargeRate = fuelRechargeRate;
@@ -212,8 +218,11 @@ public class SavingsPair
     }
 }
 
+# endregion
+
 public class main
 {
+    # region Data Structures
     public static void Main()
     {
         main app = new main();
@@ -245,6 +254,8 @@ public class main
         { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1 }
     };
 
+    # endregion
+
     public void Run()
     {
         // Setup dummy data
@@ -252,9 +263,12 @@ public class main
         Orders.Add(new Order(9, 9, 10));
         Orders.Add(new Order(0, 9, 5));
         Orders.Add(new Order(9, 0, 8));
+        Orders.Add(new Order(2, 7, 20));
+        Orders.Add(new Order(9, 1, 30));
+        Orders.Add(new Order(2, 5, 15));
 
-        Trucks.Add(new Truck(1, 30, 100, 5) { mainApp = this });
-        Trucks.Add(new Truck(2, 20, 75, 5) { mainApp = this });
+        Trucks.Add(new Truck(30, 100, 5) { mainApp = this });
+        Trucks.Add(new Truck(20 , 75, 5) { mainApp = this });
 
         UnassignedOrders.AddRange(Orders);
 
