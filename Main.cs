@@ -5,7 +5,7 @@ using Pathing = AstarPathfinding.AstarPathfinding;
 
 # region Data Classes
 
-public readonly struct EntityHandle : IEquatable<EntityHandle>
+public readonly struct EntityHandle
 {
     public readonly uint Value;
 
@@ -22,14 +22,6 @@ public readonly struct EntityHandle : IEquatable<EntityHandle>
 
     // --- Boilerplate for fast equality comparisons ---
     
-    public bool Equals(EntityHandle other) => Value == other.Value;
-    public override bool Equals(object? obj) => obj is EntityHandle other && Equals(other);
-    public override int GetHashCode() => Value.GetHashCode();
-
-    public static bool operator ==(EntityHandle left, EntityHandle right) => left.Value == right.Value;
-    public static bool operator !=(EntityHandle left, EntityHandle right) => left.Value != right.Value;
-    
-    public override string ToString() => $"{Type}:{Id}";
 }
 
 public class Node
@@ -478,7 +470,7 @@ public class main
 
     private bool TryAppendToRoute(Order assignedOrder, Order unassignedOrder, EntityHandle assignedKey, EntityHandle unassignedKey)
     {
-        // Try appending to the END of a route
+        // Try appending to the end of a route
         if (RouteEnds.TryGetValue(assignedKey, out Truck truckEndingWithAssigned) && 
             truckEndingWithAssigned.CurrentStorage + unassignedOrder.StorageRequired <= truckEndingWithAssigned.MaxStorage)
         {
@@ -495,7 +487,7 @@ public class main
             }
         }
 
-        // Try prepending to the START of a route
+        // Try prepending to the start of a route
         else if (RouteStarts.TryGetValue(assignedKey, out Truck truckStartingWithAssigned) && 
                 truckStartingWithAssigned.CurrentStorage + unassignedOrder.StorageRequired <= truckStartingWithAssigned.MaxStorage)
         {
