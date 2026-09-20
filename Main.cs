@@ -5,23 +5,23 @@ using Pathing = AstarPathfinding.AstarPathfinding;
 
 # region Data Classes
 
-public readonly struct EntityHandle
+public readonly struct EntityHandle : IEquatable<EntityHandle>
 {
     public readonly uint Value;
 
-    // Pack on creation
     public EntityHandle(byte type, uint id)
     {
-        // Top 8 bits for Type, Bottom 24 bits for ID
         Value = ((uint)type << 24) | (id & 0x00FFFFFF);
     }
 
-    // Unpack on the fly (compiled to single CPU instructions)
     public byte Type => (byte)(Value >> 24);
     public uint Id => Value & 0x00FFFFFF;
 
-    // --- Boilerplate for fast equality comparisons ---
-    
+    public bool Equals(EntityHandle other) => Value == other.Value;
+    public override bool Equals(object? obj) => obj is EntityHandle other && Equals(other);
+    public override int GetHashCode() => (int)Value;
+    public static bool operator ==(EntityHandle left, EntityHandle right) => left.Equals(right);
+    public static bool operator !=(EntityHandle left, EntityHandle right) => !left.Equals(right);
 }
 
 public class Node
@@ -32,27 +32,12 @@ public class Node
     public int G { get; set; } // Cost from start
     public int H { get; set; } // Estimated cost to end
     public int F => G + H;     // Total cost
-    public Node Parent { get; set; }
+    public Node? Parent { get; set; }
 
     public Node(int x, int y)
     {
         X = x;
         Y = y;
-    }
-}
-
-public class Path
-{
-    public Node Start { get; private set; }
-    public Node End { get; private set; }
-    public List<Node> Nodes { get; private set; }
-    public int TotalCost { get; private set; }
-    public List<int> TerrainCosts { get; private set; }
-
-    public Path(List<Node> nodes, int totalCost)
-    {
-        Nodes = nodes;
-        TotalCost = totalCost;
     }
 }
 
@@ -98,17 +83,11 @@ public enum TruckState
     Refueling
 }
 
-public enum noteType
-{
-    Depot = 0,
-    Order = 1,
-}
-
 public class Truck
 {
     private static uint _idCounter = 1;
 
-    public main mainApp { get; set; }
+    public required Program mainApp { get; set; }
     public uint Id { get; private set; }
     public int CurrentX { get; private set; }
     public int CurrentY { get; private set; }
@@ -124,8 +103,8 @@ public class Truck
     public TruckState State { get; set; } = TruckState.Idle;
 
     public bool IsEmpty => AssignedRoute.Count == 0;
-    public Order FirstStop => AssignedRoute.FirstOrDefault(); 
-    public Order LastStop => AssignedRoute.LastOrDefault();
+    public Order? FirstStop => AssignedRoute.FirstOrDefault(); 
+    public Order? LastStop => AssignedRoute.LastOrDefault();
 
     public Queue<Order> PendingOrders { get; set; } = new Queue<Order>();
     public Queue<Node> CurrentPhysicalPath { get; set; } = new Queue<Node>();
@@ -141,16 +120,31 @@ public class Truck
                 ActionTimer--;
                 if (ActionTimer <= 0)
                 {
-                    Console.WriteLine($"Truck {Id} finished loading! Hitting the road.");
-                    State = TruckState.Driving;
+                    Node startNode = new Node(CurrentX, CurrentY);
+                    Node targetNode;
 
                     if (PendingOrders.Count > 0)
                     {
                         Order nextOrder = PendingOrders.Peek();
-                        Node startNode = new Node(CurrentX, CurrentY);
-                        Node targetNode = new Node(nextOrder.X, nextOrder.Y);
-                        CurrentPhysicalPath = BuildMovementQueue(startNode, targetNode);
+                        targetNode = new Node(nextOrder.X, nextOrder.Y);
                     }
+                    else
+                    {
+                        targetNode = new Node(mainApp.CentralDepot.X, mainApp.CentralDepot.Y);
+                    }
+
+                    var pathQueue = BuildMovementQueue(startNode, targetNode);
+
+                    if (pathQueue == null)
+                    {
+                        Console.WriteLine($"Truck {Id} cannot find a path to target!");
+                        State = TruckState.Idle;
+                        return;
+                    }
+
+                    CurrentPhysicalPath = pathQueue;
+                    Console.WriteLine($"Truck {Id} finished loading! Hitting the road.");
+                    State = TruckState.Driving;
                 }
                 break;
 
@@ -188,40 +182,36 @@ public class Truck
         {
             Console.WriteLine($"Truck {Id} returned to Depot.");
             State = TruckState.Refueling;
-
             AssignedRoute.Clear();
             CurrentStorage = 0;
         }
+        else if (PendingOrders.Count > 0)
+        {
+            Order currentTarget = PendingOrders.Peek();
+
+            if (CurrentX != currentTarget.X || CurrentY != currentTarget.Y)
+            {
+                Console.WriteLine($"Error: Truck {Id} did not reach ({currentTarget.X}, {currentTarget.Y})!");
+                State = TruckState.Idle;
+                return;
+            }
+
+            Console.WriteLine($"Truck {Id} arrived at Order. Starting to unload.");
+            Order completedOrder = PendingOrders.Dequeue();
+            
+            ActionTimer = Math.Max(1, completedOrder.StorageRequired / 2);
+            State = TruckState.Loading;
+        }
         else
         {
-            Console.WriteLine($"Truck {Id} arrived at Order. Starting to unload.");
-            
-            Order completedOrder = PendingOrders.Dequeue(); 
-            
-            ActionTimer = completedOrder.StorageRequired / 2; 
-            State = TruckState.Loading;
-
-            Node startNode = new Node(CurrentX, CurrentY);
-
-            Node targetNode;
-            if (PendingOrders.Count > 0)
-            {
-                Order nextOrder = PendingOrders.Peek();
-                targetNode = new Node(nextOrder.X, nextOrder.Y);
-            }
-            else
-            {
-                targetNode = new Node(mainApp.CentralDepot.X, mainApp.CentralDepot.Y); 
-            }
-
-            CurrentPhysicalPath = BuildMovementQueue(startNode, targetNode);
+            State = TruckState.Idle;
         }
     }
 
-    private Queue<Node> BuildMovementQueue(Node start, Node target)
+    private Queue<Node>? BuildMovementQueue(Node start, Node target)
     {
         var path = Pathing.FindPathAndReturnPath(mainApp.testingGrid, start, target);
-        if (path == null) return new Queue<Node>();
+        if (path == null) return null;
 
         // Remove the first node since it's the current position of the truck
         var queue = new Queue<Node>(path);
@@ -256,13 +246,13 @@ public class SavingsPair
 
 # endregion
 
-public class main
+public class Program
 {
     # region Data Structures
     public static void Main()
     {
         // Initialize the backend
-        main app = new main();
+        Program app = new Program();
         
         // Uncomment Run and comment the rest of this script to run the backend simulation without visualization
         //app.Run();
@@ -274,7 +264,6 @@ public class main
         visualizer.Run(); 
     }
 
-    // Key: (Start Node ID, End Node ID) -> Distance
     public Dictionary<(EntityHandle, EntityHandle), int> DistanceMatrix = new Dictionary<(EntityHandle, EntityHandle), int>();
     public Dictionary<EntityHandle, Truck> RouteStarts = new Dictionary<EntityHandle, Truck>();
     public Dictionary<EntityHandle, Truck> RouteEnds = new Dictionary<EntityHandle, Truck>();
@@ -282,7 +271,7 @@ public class main
     public List<Order> UnassignedOrders = new List<Order>();
 
     public List<Order> Orders = new List<Order>();
-    public Depot CentralDepot;
+    public Depot CentralDepot = null!;
     public List<Truck> Trucks = new List<Truck>();
     public List<SavingsPair> sortedSavings = new List<SavingsPair>();
     public int[,] testingGrid = new int[10, 10]
@@ -387,8 +376,8 @@ public class main
             EntityHandle a = entry.OrderA_Key;
             EntityHandle b = entry.OrderB_Key;
 
-            Order orderA = UnassignedOrders.FirstOrDefault(o => o.Id == a.Id);
-            Order orderB = UnassignedOrders.FirstOrDefault(o => o.Id == b.Id);
+            Order? orderA = UnassignedOrders.FirstOrDefault(o => o.Id == a.Id);
+            Order? orderB = UnassignedOrders.FirstOrDefault(o => o.Id == b.Id);
 
             if (orderA == null || orderB == null) continue;
 
@@ -417,9 +406,14 @@ public class main
         {
             Order leftoverOrder = UnassignedOrders[i];
 
-            // Find any idle truck that has enough space for this single order
-            Truck availableTruck = availableTrucks.FirstOrDefault(t => 
-                t.CurrentStorage + leftoverOrder.StorageRequired <= t.MaxStorage);
+            Truck? availableTruck = availableTrucks.FirstOrDefault(t => 
+            {
+                if (t.CurrentStorage + leftoverOrder.StorageRequired > t.MaxStorage)
+                    return false;
+
+                var candidateRoute = new List<Order>(t.AssignedRoute) { leftoverOrder };
+                return CalculateRouteFuelCost(candidateRoute) <= t.MaxFuelCapacity;
+            });
 
             if (availableTruck != null)
             {
@@ -447,7 +441,7 @@ public class main
 
     private bool TryCreateNewRoute(Order orderA, Order orderB, EntityHandle a, EntityHandle b)
     {
-        Truck emptyTruck = Trucks.FirstOrDefault(t => t.IsEmpty);
+        Truck? emptyTruck = Trucks.FirstOrDefault(t => t.IsEmpty);
         if (emptyTruck != null && emptyTruck.CurrentStorage + orderA.StorageRequired + orderB.StorageRequired <= emptyTruck.MaxStorage)
         {
             List<Order> testRoute = new List<Order> { orderA, orderB };
@@ -471,7 +465,7 @@ public class main
     private bool TryAppendToRoute(Order assignedOrder, Order unassignedOrder, EntityHandle assignedKey, EntityHandle unassignedKey)
     {
         // Try appending to the end of a route
-        if (RouteEnds.TryGetValue(assignedKey, out Truck truckEndingWithAssigned) && 
+        if (RouteEnds.TryGetValue(assignedKey, out Truck? truckEndingWithAssigned) && 
             truckEndingWithAssigned.CurrentStorage + unassignedOrder.StorageRequired <= truckEndingWithAssigned.MaxStorage)
         {
             List<Order> testRoute = new List<Order>(truckEndingWithAssigned.AssignedRoute) { unassignedOrder };
@@ -488,7 +482,7 @@ public class main
         }
 
         // Try prepending to the start of a route
-        else if (RouteStarts.TryGetValue(assignedKey, out Truck truckStartingWithAssigned) && 
+        else if (RouteStarts.TryGetValue(assignedKey, out Truck? truckStartingWithAssigned) && 
                 truckStartingWithAssigned.CurrentStorage + unassignedOrder.StorageRequired <= truckStartingWithAssigned.MaxStorage)
         {
             List<Order> testRoute = new List<Order>(truckStartingWithAssigned.AssignedRoute);
@@ -509,7 +503,7 @@ public class main
 
     private bool TryMergeExistingRoutes(EntityHandle keyA, EntityHandle keyB)
     {
-        if (RouteEnds.TryGetValue(keyA, out Truck truckA) && RouteStarts.TryGetValue(keyB, out Truck truckB) && truckA.Id != truckB.Id)
+        if (RouteEnds.TryGetValue(keyA, out Truck? truckA) && RouteStarts.TryGetValue(keyB, out Truck? truckB) && truckA.Id != truckB.Id)
         {
             if (truckA.CurrentStorage + truckB.CurrentStorage <= truckA.MaxStorage)
             {
@@ -517,7 +511,7 @@ public class main
                 testRoute.AddRange(truckB.AssignedRoute);
                 if (CalculateRouteFuelCost(testRoute) <= truckA.MaxFuelCapacity)
                 {
-                    EntityHandle endOfTruckB = new EntityHandle(type: 1, id: truckB.LastStop.Id);
+                    EntityHandle endOfTruckB = new EntityHandle(type: 1, id: truckB.LastStop!.Id);
                     truckA.AssignedRoute.AddRange(truckB.AssignedRoute);
                     truckA.CurrentStorage += truckB.CurrentStorage;
                     truckB.AssignedRoute.Clear();
@@ -537,7 +531,7 @@ public class main
                 testRoute.AddRange(truckA.AssignedRoute);
                 if (CalculateRouteFuelCost(testRoute) <= truckB.MaxFuelCapacity)
                 {
-                    EntityHandle endOfTruckA = new EntityHandle(type: 1, id: truckA.LastStop.Id);
+                    EntityHandle endOfTruckA = new EntityHandle(type: 1, id: truckA.LastStop!.Id);
                     truckB.AssignedRoute.AddRange(truckA.AssignedRoute);
                     truckB.CurrentStorage += truckA.CurrentStorage;
                     truckA.AssignedRoute.Clear();

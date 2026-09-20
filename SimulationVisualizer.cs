@@ -9,7 +9,7 @@ using Raylib_cs;
 
 public class SimulationVisualizer
 {
-    private readonly main _backend;
+    private readonly Program _backend;
 
     // --- Playback ---
     private float _timer = 0f;
@@ -55,7 +55,7 @@ public class SimulationVisualizer
         new Color(250, 179, 135, 255), // peach
     };
 
-    public SimulationVisualizer(main backend)
+    public SimulationVisualizer(Program backend)
     {
         _backend = backend;
     }
