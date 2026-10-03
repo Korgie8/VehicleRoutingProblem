@@ -49,6 +49,7 @@ public class Order
     public int X { get; set; }
     public int Y { get; set; }
     public int StorageRequired { get; set; }
+    public bool IsReachable { get; set; } = true;
 
     public Order(int x, int y, int storageRequired)
     {
@@ -276,8 +277,8 @@ public class Program
     public List<SavingsPair> sortedSavings = new List<SavingsPair>();
     public int[,] testingGrid = new int[10, 10]
     {
-        { 1,  1,  1,  1, 99,  1,  1,  1,  1,  1 },
-        { 1,  1,  1,  1, 99,  1,  1,  1,  1,  1 },
+        { 1,  1,  1,  1, 99,  1,  99,  1,  1,  1 },
+        { 1,  1,  1,  1, 99,  99,  1,  1,  1,  1 },
         { 1,  1,  1,  1, 99,  1,  1,  1,  1,  1 },
         { 1,  1,  1,  1, 99,  1,  1,  1,  1,  1 },
         { 1,  1,  1,  1, 99,  5,  5,  5,  1,  1 }, 
@@ -300,12 +301,16 @@ public class Program
         // Setup dummy data
         CentralDepot = new Depot(0, 0);
         
-        Orders.Add(new Order(9, 9, 10));
-        Orders.Add(new Order(0, 9, 5));
-        Orders.Add(new Order(9, 0, 8));
-        Orders.Add(new Order(2, 7, 20));
-        Orders.Add(new Order(9, 1, 30));
-        Orders.Add(new Order(2, 5, 15));
+        TryAddOrder(9, 9, 10, out _);
+        TryAddOrder(0, 9, 5, out _);
+        TryAddOrder(9, 0, 8, out _);
+        TryAddOrder(2, 7, 20, out _);
+        TryAddOrder(9, 1, 30, out _);
+        TryAddOrder(2, 5, 15, out _);
+        TryAddOrder(15, 15, 10, out _); // Out of bounds
+        TryAddOrder(4, 4, 10, out _); // On impassable tile
+        TryAddOrder(5, 0, 15, out _); // Unreachable
+        TryAddOrder(0, 0, 5, out _); // At depot
 
         Trucks.Add(new Truck(30, 100, 5) { mainApp = this });
         Trucks.Add(new Truck(20 , 75, 5) { mainApp = this });
@@ -580,22 +585,29 @@ public class Program
             EntityHandle orderKey = new EntityHandle(type: 1, id: order.Id);
             int cost = Pathing.FindPathAndReturnInt(grid, depotNode, orderNode);
             
-            if (cost != -1)
+            if (cost == -1)
             {
-                DistanceMatrix[(depotKey, orderKey)] = cost;
-                DistanceMatrix[(orderKey, depotKey)] = cost;
+                Console.WriteLine($"[Warning] Order {order.Id} at ({order.X}, {order.Y}) is unreachable! Ignoring it.");
+                order.IsReachable = false;
+                UnassignedOrders.Remove(order);
+                continue;
             }
+
+            DistanceMatrix[(depotKey, orderKey)] = cost;
+            DistanceMatrix[(orderKey, depotKey)] = cost;
         }
 
-        for (int i = 0; i < Orders.Count; i++)
-        {
-            Node nodeA = new Node(Orders[i].X, Orders[i].Y);
-            EntityHandle keyA = new EntityHandle(type: 1, id: Orders[i].Id);
+        var reachableOrders = Orders.Where(o => o.IsReachable).ToList();
 
-            for (int j = i + 1; j < Orders.Count; j++)
+        for (int i = 0; i < reachableOrders.Count; i++)
+        {
+            Node nodeA = new Node(reachableOrders[i].X, reachableOrders[i].Y);
+            EntityHandle keyA = new EntityHandle(type: 1, id: reachableOrders[i].Id);
+
+            for (int j = i + 1; j < reachableOrders.Count; j++)
             {
-                Node nodeB = new Node(Orders[j].X, Orders[j].Y);
-                EntityHandle keyB = new EntityHandle(type: 1, id: Orders[j].Id);
+                Node nodeB = new Node(reachableOrders[j].X, reachableOrders[j].Y);
+                EntityHandle keyB = new EntityHandle(type: 1, id: reachableOrders[j].Id);
 
                 int cost = Pathing.FindPathAndReturnInt(grid, nodeA, nodeB);
 
@@ -635,5 +647,41 @@ public class Program
         }
 
         return savingsList.OrderByDescending(s => s.Savings).ToList();
+    }
+
+    public bool IsInBounds(int x, int y)
+    {
+        int height = testingGrid.GetLength(0); // Rows
+        int width = testingGrid.GetLength(1);  // Columns
+
+        return x >= 0 && x < width && y >= 0 && y < height;
+    }
+
+    public bool TryAddOrder(int x, int y, int storageRequired, out Order? createdOrder)
+    {
+        if (!IsInBounds(x, y))
+        {
+            Console.WriteLine($"[Rejected] Order position ({x}, {y}) is out of grid bounds ({testingGrid.GetLength(1)}x{testingGrid.GetLength(0)}).");
+            createdOrder = null;
+            return false;
+        }
+
+        if (testingGrid[y, x] >= 99)
+        {
+            Console.WriteLine($"[Rejected] Order position ({x}, {y}) is on an impassable tile (99).");
+            createdOrder = null;
+            return false;
+        }
+
+        if (CentralDepot != null && x == CentralDepot.X && y == CentralDepot.Y)
+        {
+            Console.WriteLine($"[Rejected] Order position ({x}, {y}) is at the depot location.");
+            createdOrder = null;
+            return false;
+        }
+
+        createdOrder = new Order(x, y, storageRequired);
+        Orders.Add(createdOrder);
+        return true;
     }
 }
