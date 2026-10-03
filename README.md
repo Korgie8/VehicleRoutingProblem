@@ -26,8 +26,8 @@ The entire project is made in C# and functions as follows:
 5. **GUI:** A visualizer layer for the simulation using the [Raylib-cs](https://github.com/ChrisDill/Raylib-cs) library.
 
 <details>
-<summary><b>Running and Editing Explanation</b> (Click to expand)</summary>
-
+<summary><h2><b>Running, Controls & Configuration Guide</b> (Click to expand)</h2></summary>
+  
 ## How to Run It
 
 In order to breathe life into this wonderful creation, the following steps must be executed in the exact order:
@@ -43,6 +43,17 @@ cd your-repo-name
 ### Secundo
 
 The engine requires the **.NET 8.0 SDK** (or newer). Raylib-cs bundles its own native binaries for desktop platforms, but on Linux some windowing dependencies are required.
+
+#### Linux (Arch)
+
+```bash
+# Install .NET SDK if not already present
+sudo pacman -S dotnet-sdk
+
+# Install Raylib graphic/windowing dependencies (X11 / OpenGL / Mesa)
+sudo pacman -S libx11 libxcursor libxrandr libxinerama libxi mesa
+
+```
 
 #### Linux (Fedora)
 
