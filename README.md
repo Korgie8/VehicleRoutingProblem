@@ -18,7 +18,7 @@ For those who are not familiar with the [Vehicle Routing Problem (VRP)](https://
 The entire project is made in C# and functions as follows:
 1. **Setup:** Initializes the grid map, delivery orders (coordinates and cargo weight), and truck fleet specifications (storage limit, fuel capacity, recharge rate).
 2. **[Pathfinding (A*)](https://en.wikipedia.org/wiki/A*_search_algorithm):** Calculates true shortest paths across the terrain grid. Instead of assuming straight lines, it routes around obstacles (cost 99) and accounts for difficult terrain (cost 5), caching the results into a pairwise distance matrix.
-3. **[Route Planning (Clarke & Wright Savings)]([https://en.wikipedia.org/wiki/Clarke_and_Wright_savings_algorithm](https://richard-faint.com/writing/articles/clarke-wright-savings)):**
+3. **[Route Planning (Clarke & Wright Savings)](https://richard-faint.com/writing/articles/clarke-wright-savings):**
    * Calculates fuel savings for serving two orders on a shared route versus two separate round trips to the depot ($S_{ij} = d_{i0} + d_{0j} - d_{ij}$).
    * Iterates through order pairs sorted by highest savings, merging routes while validating that neither vehicle cargo capacity nor maximum fuel range is breached.
    * Assigns any leftover unmerged orders to available vehicles with spare capacity.
