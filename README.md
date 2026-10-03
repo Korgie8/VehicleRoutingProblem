@@ -7,7 +7,7 @@ I am filled with indescribable feelings of pure happiness by your very presence,
 - **Terrain-Aware Costs:** Travel costs reflect actual navigable terrain rather than simplified Euclidean (straight-line) distances. 
 - **Tick-Based Simulation:** Dynamic execution driven by discrete ticks and per-truck state machines, which is then rendered by Raylib-cs.
 
-For those who are not familiar with the [Vehicle Routing Problem (VRP)](https://en.wikipedia.org/wiki/Vehicle_routing_problem), it is said to be: "What is the optimal set of routes for a fleet of vehicles to traverse in order to deliver to a given set of customers?"
+For those who are not familiar with the [Vehicle Routing Problem (VRP)](https://en.wikipedia.org/wiki/Vehicle_routing_problem), it is something along those lines: "What is the optimal set of routes for a fleet of vehicles to traverse in order to deliver to a given set of customers?"
 
 ![Simulation Demo](Assets/demo.gif)
 
@@ -42,7 +42,7 @@ cd your-repo-name
 
 ### Secundo
 
-The engine requires the **.NET 8.0 SDK** (or newer). Raylib-cs bundles its own native binaries for desktop platforms, but on Linux some windowing dependencies are required.
+The engine requires the **.NET 8.0 SDK** (or newer). Raylib-cs bundles its own native binaries for desktop platforms, but on Linux, some windowing dependencies are required.
 
 #### Linux (Arch)
 
