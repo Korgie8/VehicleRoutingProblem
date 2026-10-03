@@ -10,8 +10,8 @@ public class SimulationVisualizer
 
     // --- Playback ---
     private float _timer = 0f;
-    private float _secondsPerTick = 0.1f;
-    private bool _paused = true;
+    private float _secondsPerTick = 0.6f;
+    private bool _paused = false;
 
     // Grid-space (not pixel) positions used to smoothly interpolate truck movement
     // between backend ticks, keyed by Truck.Id.
