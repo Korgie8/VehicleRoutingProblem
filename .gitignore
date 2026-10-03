@@ -1,0 +1,17 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio & VS Code caches
+.vscode/
+.vs/
+*.user
+*.suo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Heavy media assets (keep only optimized demo.gif)
+*.mp4
+*.GIF
