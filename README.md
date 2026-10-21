@@ -36,8 +36,8 @@ In order to breathe life into this wonderful creation, the following steps must 
 Clone the repository onto your machine of choice:
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/Korgie8/VehicleRoutingProblem.git
+cd VehicleRoutingProblem
 ```
 
 ### Secundo
