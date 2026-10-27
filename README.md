@@ -122,18 +122,18 @@ To deliver the best possible result given my skills at the time, I had to make a
 
 ### The Cost of Realism
 
-Unlike the standard Vehicle Routing Problem implementations which use simple Euclidean distances, mine version contains n **A* search algorithm** to navigate around obstacles and rough terrain. While this makes the simulation realistic and most accurate, it creates a computational bottleneck. Generating the pairwise distance matrix requires running A* algorithm between every single node, resulting in an **$O(N^2)$** initialization time that spikes exponentially on larger grids.
+Unlike the standard Vehicle Routing Problem implementations that use simple Euclidean distances, my version contains an **A* search algorithm** to navigate around obstacles and rough terrain. While this makes the simulation realistic and more accurate, it creates a computational bottleneck. Generating the pairwise distance matrix requires running the A* algorithm between every single node, resulting in an **$O(N^2)$** initialization time that spikes exponentially on larger grids.
 
 ### Heuristics vs Perfection
 
-Due to the Vehicle Routing Problem being notoriously **NP-Hard** calculating the absolute perfect route for a large fleet is computationally unfeasible. To solve this issue I have taken a route in between and used **Clarke-Wright Savings algorithm** to provide satisfactory solution in a manageable time. Unfortunately, the trade-off is that as the map scales, the heuristic solution sacrifices optimal accuracy, resulting in sligly less efficient routes than the theoretical optimum.
+Due to the Vehicle Routing Problem being notoriously ** NP-hard **, calculating the absolute perfect route for a large fleet is computationally unfeasible. To solve this issue, I have taken a route in between and used the **Clarke-Wright Savings algorithm** to provide a satisfactory solution in a manageable time. Unfortunately, the trade-off is that as the map scales, the heuristic solution sacrifices optimal accuracy, resulting in slightly less efficient routes than the theoretical optimum.
 
 ### Future Roadmap
 
-If I myself were to expand this project, I would with the utmost urgency focus on scalability and dynamic exectution:
-* **Multithreading:** Parallelizing the A* distance matrix generation to utilize multi-core CPUs.
-* **Algorithmic Upgrades:** Replacing the greedy heuristic with a meta-heuristic like a Genetic Algorithm or Simulated Annealing for better large-scale accuracy.
-* **Dynamic Routing:** Allowing the engine to accept new orders while trucks are already en route, forcing real-time route recalculation.
+If I myself were to expand this project, I would, with the utmost urgency, focus on scalability and dynamic execution:
+- **Multithreading:** Parallelizing the A* distance matrix generation to utilize multi-core CPUs.
+- **Algorithmic Upgrades:** Replacing the greedy heuristic with a meta-heuristic like a Genetic Algorithm or Simulated Annealing for better large-scale accuracy.
+- **Dynamic Routing:** Allowing the engine to accept new orders while trucks are already en route, forcing real-time route recalculation.
 
 ## Acknowledgements
 
