@@ -37,7 +37,7 @@ Clone the repository onto your machine of choice:
 
 ```bash
 git clone https://github.com/Korgie8/VehicleRoutingProblem.git
-cd your-repo-name
+cd VehicleRoutingProblem
 ```
 
 ### Secundo
