@@ -7,7 +7,7 @@ I am filled with indescribable feelings of pure happiness by your very presence,
 - **Terrain-Aware Costs:** Travel costs reflect actual navigable terrain rather than simplified Euclidean (straight-line) distances. 
 - **Tick-Based Simulation:** Dynamic execution driven by discrete ticks and per-truck state machines, which is then rendered by Raylib-cs.
 
-For those who are not familiar with the [Vehicle Routing Problem (VRP)](https://en.wikipedia.org/wiki/Vehicle_routing_problem), it is something along those lines: "What is the optimal set of routes for a fleet of vehicles to traverse in order to deliver to a given set of customers?"
+For those who are not familiar with the [Vehicle Routing Problem (VRP)](https://en.wikipedia.org/wiki/Vehicle_routing_problem), it is said to be: "What is the optimal set of routes for a fleet of vehicles to traverse in order to deliver to a given set of customers?"
 
 ![Simulation Demo](Assets/demo.gif)
 
@@ -18,7 +18,7 @@ For those who are not familiar with the [Vehicle Routing Problem (VRP)](https://
 The entire project is made in C# and functions as follows:
 1. **Setup:** Initializes the grid map, delivery orders (coordinates and cargo weight), and truck fleet specifications (storage limit, fuel capacity, recharge rate).
 2. **[Pathfinding (A*)](https://en.wikipedia.org/wiki/A*_search_algorithm):** Calculates true shortest paths across the terrain grid. Instead of assuming straight lines, it routes around obstacles (cost 99) and accounts for difficult terrain (cost 5), caching the results into a pairwise distance matrix.
-3. **[Route Planning (Clarke & Wright Savings)](https://richard-faint.com/writing/articles/clarke-wright-savings):**
+3. **[Route Planning (Clarke & Wright Savings)](https://en.wikipedia.org/wiki/Clarke_and_Wright_savings_algorithm):**
    * Calculates fuel savings for serving two orders on a shared route versus two separate round trips to the depot ($S_{ij} = d_{i0} + d_{0j} - d_{ij}$).
    * Iterates through order pairs sorted by highest savings, merging routes while validating that neither vehicle cargo capacity nor maximum fuel range is breached.
    * Assigns any leftover unmerged orders to available vehicles with spare capacity.
@@ -26,8 +26,8 @@ The entire project is made in C# and functions as follows:
 5. **GUI:** A visualizer layer for the simulation using the [Raylib-cs](https://github.com/ChrisDill/Raylib-cs) library.
 
 <details>
-<summary><h2><b>Running, Controls & Configuration Guide</b> (Click to expand)</h2></summary>
-  
+<summary><b>Running and Editing Explanation</b> (Click to expand)</summary>
+
 ## How to Run It
 
 In order to breathe life into this wonderful creation, the following steps must be executed in the exact order:
@@ -36,24 +36,16 @@ In order to breathe life into this wonderful creation, the following steps must 
 Clone the repository onto your machine of choice:
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
+git clone https://github.com/Korgie8/VehicleRoutingProblem.git
 cd your-repo-name
 ```
 
 ### Secundo
 
-The engine requires the **.NET 8.0 SDK** (or newer). Raylib-cs bundles its own native binaries for desktop platforms, but on Linux, some windowing dependencies are required.
+The engine requires the **.NET 8.0 SDK** (or newer). Raylib-cs bundles its own native binaries for desktop platforms, but on Linux some windowing dependencies are required.
 
-#### Linux (Arch)
+####
 
-```bash
-# Install .NET SDK if not already present
-sudo pacman -S dotnet-sdk
-
-# Install Raylib graphic/windowing dependencies (X11 / OpenGL / Mesa)
-sudo pacman -S libx11 libxcursor libxrandr libxinerama libxi mesa
-
-```
 
 #### Linux (Fedora)
 
@@ -126,6 +118,22 @@ You can tweak the map grid, orders, and vehicle stats directly inside `Program.c
 
 ## My thoughts
 
+To deliver the best possible result given my skills at the time, I had to make a few architectural compromises; otherwise, it would not see the light of day.
+
+### The Cost of Realism
+
+Unlike the standard Vehicle Routing Problem implementations which use simple Euclidean distances, mine version contains n **A* search algorithm** to navigate around obstacles and rough terrain. While this makes the simulation realistic and most accurate, it creates a computational bottleneck. Generating the pairwise distance matrix requires running A* algorithm between every single node, resulting in an **$O(N^2)$** initialization time that spikes exponentially on larger grids.
+
+### Heuristics vs Perfection
+
+Due to the Vehicle Routing Problem being notoriously **NP-Hard** calculating the absolute perfect route for a large fleet is computationally unfeasible. To solve this issue I have taken a route in between and used **Clarke-Wright Savings algorithm** to provide satisfactory solution in a manageable time. Unfortunately, the trade-off is that as the map scales, the heuristic solution sacrifices optimal accuracy, resulting in sligly less efficient routes than the theoretical optimum.
+
+### Future Roadmap
+
+If I myself were to expand this project, I would with the utmost urgency focus on scalability and dynamic exectution:
+* **Multithreading:** Parallelizing the A* distance matrix generation to utilize multi-core CPUs.
+* **Algorithmic Upgrades:** Replacing the greedy heuristic with a meta-heuristic like a Genetic Algorithm or Simulated Annealing for better large-scale accuracy.
+* **Dynamic Routing:** Allowing the engine to accept new orders while trucks are already en route, forcing real-time route recalculation.
 
 ## Acknowledgements
 
