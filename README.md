@@ -9,8 +9,11 @@ I am filled with indescribable feelings of pure happiness by your very presence,
 
 For those who are not familiar with the [Vehicle Routing Problem (VRP)](https://en.wikipedia.org/wiki/Vehicle_routing_problem), it is said to be: "What is the optimal set of routes for a fleet of vehicles to traverse in order to deliver to a given set of customers?"
 
-![Simulation Demo](Assets/demo.gif)
-
+<p align="center">
+  <em>The animation below demonstrates the Vehicle Routing Problem execution in action.</em>
+  <br />
+  <img src="Assets/demo.gif" alt="Simulation Demo" width="800" />
+</p>
 ## Overview
 
 ### How does it work (In simple terms)
