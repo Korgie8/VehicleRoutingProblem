@@ -115,11 +115,6 @@ You can tweak the map grid, orders, and vehicle stats directly inside `Program.c
 
 </details>
 
-## Built With
-
-- **C# / .NET** (Core simulation and algorithmic backend) 
-- **[Raylib-cs](https://github.com/ChrisDill/Raylib-cs)** (2D grid rendering and visualizer)
-
 ## My thoughts
 
 To deliver the best possible result given my skills at the time, I had to make a few architectural compromises; otherwise, it would not see the light of day.
@@ -138,6 +133,11 @@ If I myself were to expand this project, I would, with the utmost urgency, focus
 - **Multithreading:** Parallelizing the [A* distance](https://en.wikipedia.org/wiki/A*_search_algorithm) matrix generation to utilize multi-core CPUs.
 - **Algorithmic Upgrades:** Replacing the greedy heuristic with a meta-heuristic like a [Genetic Algorithm](https://en.wikipedia.org/wiki/Genetic_algorithm) or [Simulated Annealing](https://en.wikipedia.org/wiki/Simulated_annealing) for better large-scale accuracy.
 - **Dynamic Routing:** Allowing the engine to accept new orders while trucks are already en route, forcing real-time route recalculation.
+
+## Built With
+
+- **C# / .NET** (Core simulation and algorithmic backend) 
+- **[Raylib-cs](https://github.com/ChrisDill/Raylib-cs)** (2D grid rendering and visualizer)
 
 ## Acknowledgements
 
